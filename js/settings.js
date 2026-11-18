@@ -11,7 +11,7 @@ export const DEFAULTS = {
   wolfTimerOn: true,
   voteTime: 60,         // 大家找狼人時間
   voteTimerOn: true,
-  wordChoices: 2,       // 村長候選詞數
+  wordChoices: 3,       // 村長候選詞數
   linePause: 1.5,       // 每句話後的停頓（秒）
   viewTime: 6,          // 查看資訊、豎拇指等的時間（秒）
   voiceOn: true,
@@ -35,7 +35,10 @@ function save(key, value) {
   try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* 私密瀏覽等情況 */ }
 }
 
-export const settings = { ...DEFAULTS, ...load(KEY_SETTINGS, {}) };
+const stored = load(KEY_SETTINGS, {});
+// 舊版預設候選詞是 2 個；沒改過的人升級成新預設 3 個
+if (!stored.rev && stored.wordChoices === 2) delete stored.wordChoices;
+export const settings = { ...DEFAULTS, ...stored, rev: 2 };
 // 遊戲計時只用整數分鐘
 settings.gameTime = Math.min(900, Math.max(60, Math.round(settings.gameTime / 60) * 60));
 export function saveSettings() { save(KEY_SETTINGS, settings); }

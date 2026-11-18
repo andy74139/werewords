@@ -278,12 +278,13 @@ function waitPick() {
 }
 
 function sideHTML(inner) {
-  return `<div class="side side-left">${inner}</div><div class="side side-right">${inner}</div>`;
+  const len = game?.word ? [...game.word].length : 3;
+  return `<div class="side side-left" style="--len:${len}">${inner}</div><div class="side side-right" style="--len:${len}">${inner}</div>`;
 }
 
 function wordView() {
   return {
-    content: `<div class="word-label">魔法咒語</div><div class="word-big">${esc(game.word)}</div>`,
+    content: `<div class="word-label">魔法咒語</div><div class="word-big" style="--len:${[...game.word].length}">${esc(game.word)}</div>`,
     side: sideHTML(`<span class="side-word">${esc(game.word)}</span>`),
   };
 }

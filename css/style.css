@@ -261,7 +261,7 @@ button.card:active { transform: scale(0.96); }
   padding: 0 0.4rem;
 }
 /* 有兩側旋轉文字時，中間內容留出空間（--side-w：兩側文字的字高） */
-.stage { --side-w: clamp(2.4rem, 10vmin, 5.5rem); }
+.stage { --side-w: clamp(3.4rem, 16vmin, 8rem); }
 .stage.has-side .prompt, .stage.has-side .content { padding: 0 calc(var(--side-w) + 0.8rem); }
 .bottom-bar {
   flex: none;
@@ -301,13 +301,18 @@ button.card:active { transform: scale(0.96); }
 
 .word-label { color: var(--muted); font-size: 1rem; letter-spacing: 0.2em; }
 .word-big {
-  font-size: clamp(2.6rem, 12vmin, 7.5rem);
+  font-size: clamp(2.2rem, 11vmin, 7.5rem);
   font-weight: 900;
   letter-spacing: 0.08em;
   text-align: center;
   line-height: 1.15;
   word-break: keep-all;
   overflow-wrap: anywhere;
+}
+/* 兩側有字時，中間的咒語依字數縮小，保持一行 */
+.has-side .word-big {
+  font-size: min(clamp(2.2rem, 11vmin, 7.5rem), calc((100vw - 2 * var(--side-w) - 3rem) / var(--len, 3) / 1.1));
+  white-space: nowrap;
 }
 .info { font-size: 1.3rem; font-weight: 700; text-align: center; line-height: 1.5; max-width: 22em; }
 
@@ -336,8 +341,10 @@ button.card:active { transform: scale(0.96); }
 }
 .side-left { left: calc(var(--safe-l) + var(--side-w) / 2 + 0.3rem); transform: translate(-50%, -50%) rotate(90deg); }
 .side-right { right: calc(var(--safe-r) + var(--side-w) / 2 + 0.3rem); transform: translate(50%, -50%) rotate(-90deg); }
-.side-word { font-size: var(--side-w); letter-spacing: 0.08em; line-height: 1; }
-.side .hint { font-size: calc(var(--side-w) * 0.8); }
+/* 字數多時自動縮小，確保整個詞放得進螢幕高度的 60% */
+.side-word { font-size: min(var(--side-w), calc(60vh / var(--len, 3))); letter-spacing: 0.04em; line-height: 1; }
+.side .hint { font-size: min(calc(var(--side-w) * 0.8), calc(48vh / var(--len, 3))); }
+.side { text-shadow: 0 0 10px rgba(0, 0, 0, 0.9); }
 
 /* ---------- 猜咒語倒數 ---------- */
 .guess { justify-content: space-between; }
