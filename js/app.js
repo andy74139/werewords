@@ -152,7 +152,10 @@ function startGame() {
     guessState: null,
   };
   game.steps = buildNight();
-  runNight(0);
+  // 先放 1.5 秒背景音樂再開始旁白
+  renderNight(game.steps[0], game.steps[0].text);
+  const lead = (game.token = new Token());
+  sleep(1500, lead).then(() => { if (game && !lead.cancelled) runNight(0); });
 }
 
 function cleanupGame() {
@@ -179,12 +182,21 @@ function buildNight() {
   };
 
   step('everyone', '所有人，閉上眼睛。');
-  step('mayor', '村長，醒過來，並點選你的秘密身份。', { view: 'pickMayorRole' });
-  step('mayor', '村長，選擇你的魔法咒語。', { view: 'pickWord' });
+  step('mayor', '村長，醒過來，並點選你的秘密身份。', {
+    view: 'pickMayorRole',
+    remind: '開始了，村長，在螢幕上點選你的秘密角色。',
+  });
+  step('mayor', '村長，選擇你的魔法咒語。', {
+    view: 'pickWord',
+    remind: '大家都在等喔，村長，在大家睡著前快選擇魔法咒語吧！',
+  });
   step('mayor', '村長，閉上眼睛。');
 
   if (has('doppelganger')) {
-    step('doppelganger', '化身幽靈，醒過來，查看另一位玩家的身份牌，然後在螢幕上點選那個角色。', { view: 'pickDoppel' });
+    step('doppelganger', '化身幽靈，醒過來，查看另一位玩家的身份牌，然後在螢幕上點選那個角色。', {
+      view: 'pickDoppel',
+      remind: '化身幽靈，大家都在等你喔，看完身份牌，就在螢幕上點選那個角色吧！',
+    });
     // 不論複製了誰都唸同一句，避免其他人從語音得知化身幽靈複製了誰
     step('doppelganger', '化身幽靈，看螢幕。', { view: 'doppelInfo', hold: true });
     step('doppelganger', '化身幽靈，閉上眼睛。');
@@ -237,8 +249,23 @@ async function runStep(st, token) {
   token.onCancel(() => voice.cancel());
   const spoken = speak(text, voice);
   if (pick) {
-    await Promise.race([pick, new Promise((r) => token.onCancel(r))]);
-    voice.cancel();
+    // 等點選；等太久就用語音提醒，之後每隔一段時間再提醒一次
+    let picked = false;
+    let current = voice;
+    pick.then(() => { picked = true; current.cancel(); });
+    const stopped = new Promise((r) => token.onCancel(r));
+    await Promise.race([spoken, pick, stopped]);
+    while (!picked && !token.cancelled && st.remind) {
+      await Promise.race([pick, stopped, sleep(settings.remindAfter * 1000, token)]);
+      if (picked || token.cancelled) break;
+      const promptEl = app.querySelector('.prompt');
+      if (promptEl) { promptEl.textContent = st.remind; promptEl.classList.remove('nudge'); void promptEl.offsetWidth; promptEl.classList.add('nudge'); }
+      current = new Token();
+      token.onCancel(() => current.cancel());
+      await Promise.race([speak(st.remind, current), pick, stopped]);
+    }
+    await Promise.race([pick, stopped]);
+    current.cancel();
   } else {
     await spoken;
   }
@@ -667,10 +694,12 @@ const SCHEMA = [
   { key: 'voteTime', label: '大家找狼人時間', type: 'time', min: 10, max: 300, step: 10, toggle: 'voteTimerOn' },
   { section: '主持' },
   { key: 'wordChoices', label: '村長候選詞數', type: 'num', min: 1, max: 5, step: 1, fmt: (v) => `${v} 個` },
+  { key: 'remindAfter', label: '等點選太久時提醒', type: 'num', min: 5, max: 60, step: 5, fmt: (v) => `每 ${v} 秒` },
   { key: 'viewTime', label: '查看資訊／豎拇指時間', type: 'num', min: 2, max: 20, step: 1, fmt: (v) => `${v} 秒` },
   { key: 'linePause', label: '每句話後的停頓', type: 'num', min: 0, max: 5, step: 0.5, fmt: (v) => `${v} 秒` },
   { section: '聲音' },
   { key: 'voiceOn', label: '語音主持', type: 'bool' },
+  { key: 'voiceVolume', label: '語音音量', type: 'num', min: 10, max: 100, step: 10, fmt: (v) => `${v}%` },
   { key: 'voiceRate', label: '語速', type: 'num', min: 0.5, max: 1.5, step: 0.1, fmt: (v) => `${v.toFixed(1)}×` },
   { key: 'voiceName', label: '語音', type: 'voice' },
   { key: 'musicOn', label: '背景音樂', type: 'bool' },

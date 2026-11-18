@@ -244,6 +244,11 @@ button.card:active { transform: scale(0.96); }
   line-height: 1.45;
   text-shadow: 0 1px 3px #000;
 }
+.prompt.nudge { animation: nudge 0.9s ease-in-out 2; }
+@keyframes nudge {
+  0%, 100% { transform: scale(1); color: var(--gold); }
+  50% { transform: scale(1.06); color: #fff; }
+}
 .content {
   flex: 1;
   min-height: 0;

@@ -28,9 +28,17 @@ function ensureCtx() {
   const AC = window.AudioContext || window.webkitAudioContext;
   if (!AC) return null;
   ctx = new AC();
+  // 壓縮器讓音樂可以開得更大聲又不破音
+  const comp = ctx.createDynamicsCompressor();
+  comp.threshold.value = -18;
+  comp.knee.value = 12;
+  comp.ratio.value = 4;
+  comp.attack.value = 0.005;
+  comp.release.value = 0.2;
+  comp.connect(ctx.destination);
   master = ctx.createGain();
-  master.gain.value = 1;
-  master.connect(ctx.destination);
+  master.gain.value = 1.6;
+  master.connect(comp);
   musicBus = ctx.createGain();
   musicBus.gain.value = 0;
   musicBus.connect(master);
@@ -128,8 +136,9 @@ let ducked = false;
 
 function musicLevel() {
   if (!settings.musicOn) return 0;
-  const v = (settings.musicVolume / 100) * 0.6;
-  return ducked ? v * 0.35 : v;
+  const v = (settings.musicVolume / 100) * 1.4;
+  // 旁白時只稍微壓低音樂（iOS 唸語音時本身也會壓低其他聲音）
+  return ducked ? v * 0.75 : v;
 }
 
 function applyMusicLevel(ramp = 0.3) {
@@ -151,13 +160,17 @@ function scheduleMusic() {
     const bar = Math.floor(step / 8) % 8;
     const i = step % 8;
     const ch = CHORDS[bar % 4];
-    tone(musicBus, { freq: midi(ch.arp[ARP[i]]), type: 'triangle', at: nextAt, dur: 0.28, vol: 0.09 });
-    if (i === 0 || i === 4) tone(musicBus, { freq: midi(ch.bass), type: 'sine', at: nextAt, dur: 0.45, vol: 0.22, attack: 0.01 });
-    if (i % 2 === 1) noise(musicBus, { at: nextAt, dur: 0.04, vol: 0.035 });
+    tone(musicBus, { freq: midi(ch.arp[ARP[i]]), type: 'triangle', at: nextAt, dur: 0.28, vol: 0.16 });
+    if (i === 0 || i === 4) {
+      tone(musicBus, { freq: midi(ch.bass), type: 'sine', at: nextAt, dur: 0.45, vol: 0.3, attack: 0.01 });
+      // 低音加一點泛音，手機喇叭才聽得到
+      tone(musicBus, { freq: midi(ch.bass + 12), type: 'triangle', at: nextAt, dur: 0.3, vol: 0.12, attack: 0.01 });
+    }
+    if (i % 2 === 1) noise(musicBus, { at: nextAt, dur: 0.04, vol: 0.06 });
     const m = MELODY[bar][i];
     if (m) {
-      tone(musicBus, { freq: midi(m), type: 'sine', at: nextAt, dur: 0.5, vol: 0.1, attack: 0.01 });
-      tone(musicBus, { freq: midi(m + 12), type: 'sine', at: nextAt, dur: 0.25, vol: 0.025 });
+      tone(musicBus, { freq: midi(m), type: 'triangle', at: nextAt, dur: 0.5, vol: 0.18, attack: 0.01 });
+      tone(musicBus, { freq: midi(m + 12), type: 'sine', at: nextAt, dur: 0.25, vol: 0.05 });
     }
     nextAt += EIGHTH;
     step++;
@@ -170,7 +183,7 @@ export function startMusic() {
   nextAt = ctx.currentTime + 0.1;
   musicTimer = setInterval(scheduleMusic, 40);
   scheduleMusic();
-  applyMusicLevel(1.2);
+  applyMusicLevel(0.15);
 }
 
 export function stopMusic() {
@@ -278,6 +291,7 @@ export function speak(text, token) {
       if (v) u.voice = v;
       u.lang = v?.lang || 'zh-TW';
       u.rate = settings.voiceRate;
+      u.volume = settings.voiceVolume / 100;
       u.onstart = () => { started = true; };
       u.onend = finish;
       u.onerror = finish;

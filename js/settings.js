@@ -17,8 +17,10 @@ export const DEFAULTS = {
   voiceOn: true,
   voiceRate: 1.0,
   voiceName: '',
+  voiceVolume: 60,      // 0–100
+  remindAfter: 15,      // 等點選太久時，幾秒提醒一次
   musicOn: true,
-  musicVolume: 50,      // 0–100
+  musicVolume: 70,      // 0–100
   sfxOn: true,
   noRepeat: true,
 };
