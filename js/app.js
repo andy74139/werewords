@@ -22,6 +22,19 @@ const sheet = document.createElement('div');
 sheet.id = 'sheet';
 sheet.hidden = true;
 document.body.appendChild(sheet);
+// 測試用：主持時右上角跳到下一部分
+const skipBtn = document.createElement('button');
+skipBtn.id = 'skip';
+skipBtn.dataset.action = 'skip';
+skipBtn.setAttribute('aria-label', '跳到下一部分');
+skipBtn.textContent = '下一步 ⏭';
+document.body.appendChild(skipBtn);
+function showSkip(on) {
+  const visible = on && settings.skipButton;
+  skipBtn.hidden = !visible;
+  document.body.classList.toggle('has-skip', visible);
+}
+showSkip(false);
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
@@ -152,6 +165,7 @@ function startGame() {
     guessState: null,
   };
   game.steps = buildNight();
+  showSkip(true);
   // 先放 1.5 秒背景音樂再開始旁白
   renderNight(game.steps[0], game.steps[0].text);
   const lead = (game.token = new Token());
@@ -159,6 +173,7 @@ function startGame() {
 }
 
 function cleanupGame() {
+  showSkip(false);
   if (!game) return;
   game.token?.cancel();
   clearInterval(game.interval);
@@ -202,7 +217,7 @@ function buildNight() {
     step('doppelganger', '化身幽靈，閉上眼睛。');
   }
   if (has('seer')) wakeClose('seer', '先知，醒過來，查看魔法咒語。', { view: 'word', hold: true });
-  if (has('fortuneTeller')) wakeClose('fortuneTeller', '占卜師，醒過來，查看魔法咒語第一個字的部首。', { view: 'hint', hold: true });
+  if (has('fortuneTeller')) wakeClose('fortuneTeller', '占卜師，醒過來，查看魔法咒語第一個字的第一個注音。', { view: 'hint', hold: true });
   if (has('apprentice')) wakeClose('apprentice', '學徒，醒過來，看著螢幕。', { view: 'apprentice', hold: true });
   if (has('beholder')) {
     const thumbs = ['seer', 'fortuneTeller', 'apprentice'].filter(has).map((r) => ROLES[r].name);
@@ -290,14 +305,14 @@ function wordView() {
 }
 
 function hintBoxes() {
-  const { radical, length } = hintFor(game.word);
-  return `<div class="hint">${Array.from({ length }, (_, i) => `<span class="hint-box">${i === 0 ? esc(radical) : ''}</span>`).join('')}</div>`;
+  const { symbol, length } = hintFor(game.word);
+  return `<div class="hint">${Array.from({ length }, (_, i) => `<span class="hint-box">${i === 0 ? esc(symbol) : ''}</span>`).join('')}</div>`;
 }
 
 function hintView(prefix = '') {
   const { length } = hintFor(game.word);
   return {
-    content: `${prefix}<div class="word-label">第一個字的部首・共 ${length} 個字</div>${hintBoxes()}`,
+    content: `${prefix}<div class="word-label">首字第一個注音・共 ${length} 字</div>${hintBoxes()}`,
     side: sideHTML(hintBoxes()),
   };
 }
@@ -313,7 +328,7 @@ function apprenticeView() {
     return v;
   }
   if (game.mayorRole === 'fortuneTeller') {
-    return hintView('<div class="info">村長是占卜師，你得知第一個字的部首：</div>');
+    return hintView('<div class="info">村長是占卜師，你得知第一個字的第一個注音：</div>');
   }
   return infoView('村長不是先知或占卜師。');
 }
@@ -604,7 +619,32 @@ function whoops() {
 
 /* ---------- 結算 ---------- */
 
+/** 測試用：直接跳到下一部分。需要點選的頁面會隨機幫忙選一個。 */
+function skipNext() {
+  if (!game || game.paused) return;
+  sfx('tap');
+  if (game.phase === 'night') {
+    if (game.pickResolve) {
+      const opts = [...app.querySelectorAll('[data-pick]')];
+      if (opts.length) onPick(opts[Math.floor(Math.random() * opts.length)]);
+    }
+    game.token?.cancel();
+    stopSpeech();
+    runNight(game.idx + 1);
+  } else if (game.phase === 'guess') {
+    clearInterval(game.interval);
+    game.token?.cancel();
+    stopSpeech();
+    game.guessState = { remaining: game.timer.remaining, elapsed: game.timer.elapsed };
+    startVote('village', { timeUp: true });
+  } else if (game.phase === 'vote') {
+    stopSpeech();
+    finishVote(true);
+  }
+}
+
 function showResult(spoken, resultText) {
+  showSkip(false);
   game.phase = 'result';
   clearInterval(game.interval);
   const d = diffInfo();
@@ -706,6 +746,8 @@ const SCHEMA = [
   { key: 'musicOn', label: '背景音樂', type: 'bool' },
   { key: 'musicVolume', label: '音樂音量', type: 'num', min: 10, max: 100, step: 10, fmt: (v) => `${v}%` },
   { key: 'sfxOn', label: '音效', type: 'bool' },
+  { section: '測試' },
+  { key: 'skipButton', label: '主持時顯示「下一步」按鈕', type: 'bool' },
   { section: '詞庫' },
   { key: 'noRepeat', label: '不重複出過的詞', type: 'bool' },
   { type: 'history' },
@@ -861,6 +903,7 @@ document.addEventListener('click', async (e) => {
     case 'resume': resumeGame(); break;
     case 'stop': askStop(); break;
     case 'stop-now': stopGame(); break;
+    case 'skip': skipNext(); break;
     case 'guessed': if (game?.phase === 'guess') endGuess('wolves'); break;
     case 'tokens-out': if (game?.phase === 'guess') endGuess('village'); break;
     case 'vote-now': if (game?.phase === 'vote') finishVote(false); break;

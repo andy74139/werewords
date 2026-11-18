@@ -22,6 +22,7 @@ export const DEFAULTS = {
   musicOn: true,
   musicVolume: 70,      // 0–100
   sfxOn: true,
+  skipButton: true,     // 測試用：主持時右上角的「下一步」
   noRepeat: true,
 };
 

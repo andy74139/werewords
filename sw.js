@@ -1,5 +1,5 @@
 // 離線快取：改版時請把 VERSION 加 1，手機重新開啟兩次就會更新。
-const VERSION = 'v4';
+const VERSION = 'v5';
 const CACHE = `werewords-${VERSION}`;
 const ASSETS = [
   './',
@@ -9,7 +9,7 @@ const ASSETS = [
   'js/app.js',
   'js/roles.js',
   'js/words.js',
-  'js/radicals.js',
+  'js/zhuyin.js',
   'js/settings.js',
   'js/audio.js',
   'js/icons.js',

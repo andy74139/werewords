@@ -1,5 +1,5 @@
-// 中文詞庫（四種難度）與「第一個字的部首」對照表。
-import { RADICALS } from './radicals.js';
+// 中文詞庫（四種難度）。占卜師提示用的注音表在 zhuyin.js。
+import { ZHUYIN } from './zhuyin.js';
 
 export const DIFFICULTIES = [
   { id: 'easy',   name: '簡單', color: '#3be05a' },
@@ -38,7 +38,7 @@ export const WORDS = {
     檯燈 鬧鐘 拖鞋 圍巾 手套 口罩 耳機 遙控器 充電器 垃圾桶 掃把 拖把 蠟燭 花瓶
     跳跳糖 榴槤 臭襪子 指甲剪 痱子粉 蚊香 馬桶刷 降落傘 木頭人 老鷹抓小雞 大風吹 扭蛋 夾娃娃機
     刮刮樂 樂透 啞鈴 腹肌 耳挖子 橡皮筋 迴紋針 便利貼 立可白 釘書機 熱水壺 電蚊拍 捕蚊燈 防蚊液
-    不求人 倒立 打嗝 腳抽筋 葫蘆 打卡 自拍棒
+    不求人 倒立 打嗝 葫蘆 打卡 自拍棒
   `),
   hard: split(`
     通貨膨脹 民主 選舉 法律 憲法 經濟 股票 保險 貸款 稅金 退休 失眠 夢想 回憶 友情 愛情 嫉妒
@@ -76,10 +76,10 @@ export const WORDS = {
   `),
 };
 
-/** 占卜師提示：第一個字的部首 + 字數 */
+/** 占卜師提示：第一個字的第一個注音 + 字數 */
 export function hintFor(word) {
   const chars = [...word];
-  return { radical: RADICALS[chars[0]] || '？', length: chars.length };
+  return { symbol: ZHUYIN[chars[0]] || '？', length: chars.length };
 }
 
 /** 隨機抽 n 個詞，避開 exclude 中的詞（全部用過時就不避開） */

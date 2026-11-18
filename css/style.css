@@ -381,6 +381,23 @@ button.card:active { transform: scale(0.96); }
   .pick-grid { max-width: calc(5 * var(--card) + 4 * 14px); --card: clamp(62px, 15vmin, 140px); }
 }
 
+/* ---------- 測試用「下一步」 ---------- */
+#skip {
+  position: fixed;
+  top: calc(var(--safe-t) + 0.5rem);
+  right: calc(var(--safe-r) + 0.6rem);
+  z-index: 5;
+  padding: 0.3em 0.8em;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.35);
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+#skip:active { background: rgba(255, 255, 255, 0.2); }
+.has-skip .stage { padding-top: calc(var(--safe-t) + 2.6rem); }
+
 /* ---------- 遮罩、對話框 ---------- */
 #overlay {
   position: fixed;
