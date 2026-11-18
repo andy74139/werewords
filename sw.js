@@ -1,5 +1,5 @@
 // 離線快取：改版時請把 VERSION 加 1，手機重新開啟兩次就會更新。
-const VERSION = 'v3';
+const VERSION = 'v4';
 const CACHE = `werewords-${VERSION}`;
 const ASSETS = [
   './',
