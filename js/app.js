@@ -175,45 +175,45 @@ function buildNight() {
   const step = (who, text, o = {}) => S.push({ who, text, ...o });
   const wakeClose = (id, wake, o) => {
     step(id, wake, o);
-    step(id, `${ROLES[id].name}，請閉上眼睛。`);
+    step(id, `${ROLES[id].name}，閉上眼睛。`);
   };
 
-  step('everyone', '所有人，請閉上眼睛。');
-  step('mayor', '村長，請醒過來，並點選你的秘密身份。', { view: 'pickMayorRole' });
-  step('mayor', '村長，請選擇你的魔法咒語。', { view: 'pickWord' });
-  step('mayor', '村長，請閉上眼睛。');
+  step('everyone', '所有人，閉上眼睛。');
+  step('mayor', '村長，醒過來，並點選你的秘密身份。', { view: 'pickMayorRole' });
+  step('mayor', '村長，選擇你的魔法咒語。', { view: 'pickWord' });
+  step('mayor', '村長，閉上眼睛。');
 
   if (has('doppelganger')) {
-    step('doppelganger', '化身幽靈，請醒過來，查看另一位玩家的身份牌，然後在螢幕上點選那個角色。', { view: 'pickDoppel' });
+    step('doppelganger', '化身幽靈，醒過來，查看另一位玩家的身份牌，然後在螢幕上點選那個角色。', { view: 'pickDoppel' });
     // 不論複製了誰都唸同一句，避免其他人從語音得知化身幽靈複製了誰
-    step('doppelganger', '化身幽靈，請看螢幕。', { view: 'doppelInfo', hold: true });
-    step('doppelganger', '化身幽靈，請閉上眼睛。');
+    step('doppelganger', '化身幽靈，看螢幕。', { view: 'doppelInfo', hold: true });
+    step('doppelganger', '化身幽靈，閉上眼睛。');
   }
-  if (has('seer')) wakeClose('seer', '先知，請醒過來，查看魔法咒語。', { view: 'word', hold: true });
-  if (has('fortuneTeller')) wakeClose('fortuneTeller', '占卜師，請醒過來，查看魔法咒語第一個字的部首。', { view: 'hint', hold: true });
-  if (has('apprentice')) wakeClose('apprentice', '學徒，請醒過來，看著螢幕。', { view: 'apprentice', hold: true });
+  if (has('seer')) wakeClose('seer', '先知，醒過來，查看魔法咒語。', { view: 'word', hold: true });
+  if (has('fortuneTeller')) wakeClose('fortuneTeller', '占卜師，醒過來，查看魔法咒語第一個字的部首。', { view: 'hint', hold: true });
+  if (has('apprentice')) wakeClose('apprentice', '學徒，醒過來，看著螢幕。', { view: 'apprentice', hold: true });
   if (has('beholder')) {
     const thumbs = ['seer', 'fortuneTeller', 'apprentice'].filter(has).map((r) => ROLES[r].name);
     if (thumbs.length) {
       const names = joinNames(thumbs);
-      step('beholder', `守望者，請醒過來。${names}，請保持閉眼，並豎起大拇指，讓守望者知道你們是誰。`, { hold: true });
-      step('beholder', `${names}，請收回大拇指。守望者，請閉上眼睛。`);
+      step('beholder', `守望者，醒過來。${names}，保持閉眼，並豎起大拇指，讓守望者知道你們是誰。`, { hold: true });
+      step('beholder', `${names}，收回大拇指。守望者，閉上眼睛。`);
     } else {
-      wakeClose('beholder', '守望者，請醒過來。', { hold: true });
+      wakeClose('beholder', '守望者，醒過來。', { hold: true });
     }
   }
-  if (has('watchman')) wakeClose('watchman', '守夜人，請醒過來，尋找另一位守夜人。', { hold: true });
-  if (has('thing')) wakeClose('thing', '怪東西，請醒過來，輕拍你左右其中一位鄰居的肩膀。', { hold: true });
-  if (has('werewolf')) wakeClose('werewolf', '狼人，請醒過來，尋找其他狼人，並查看魔法咒語。', { view: 'word', hold: true });
+  if (has('watchman')) wakeClose('watchman', '守夜人，醒過來，尋找另一位守夜人。', { hold: true });
+  if (has('thing')) wakeClose('thing', '怪東西，醒過來，輕拍你左右其中一位鄰居的肩膀。', { hold: true });
+  if (has('werewolf')) wakeClose('werewolf', '狼人，醒過來，尋找其他狼人，並查看魔法咒語。', { view: 'word', hold: true });
   if (has('minion')) {
     if (has('werewolf')) {
-      step('minion', '爪牙，請醒過來。狼人，請保持閉眼，並豎起大拇指，讓爪牙知道你們是誰。', { hold: true });
-      step('minion', '狼人，請收回大拇指。爪牙，請閉上眼睛。');
+      step('minion', '爪牙，醒過來。狼人，保持閉眼，並豎起大拇指，讓爪牙知道你們是誰。', { hold: true });
+      step('minion', '狼人，收回大拇指。爪牙，閉上眼睛。');
     } else {
-      wakeClose('minion', '爪牙，請醒過來。', { hold: true });
+      wakeClose('minion', '爪牙，醒過來。', { hold: true });
     }
   }
-  step('day', '所有人，請醒過來。');
+  step('day', '所有人，醒過來。');
   return S;
 }
 
@@ -232,12 +232,17 @@ async function runNight(from) {
 async function runStep(st, token) {
   const text = typeof st.text === 'function' ? st.text() : st.text;
   const pick = renderNight(st, text);
-  await speak(text, token);
-  if (token.cancelled) return;
+  // 需要點選的頁面：一點選就停止旁白、馬上進下一頁
+  const voice = new Token();
+  token.onCancel(() => voice.cancel());
+  const spoken = speak(text, voice);
   if (pick) {
     await Promise.race([pick, new Promise((r) => token.onCancel(r))]);
-    if (token.cancelled) return;
+    voice.cancel();
+  } else {
+    await spoken;
   }
+  if (token.cancelled) return;
   await sleep(((st.hold ? settings.viewTime : 0) + settings.linePause) * 1000, token);
 }
 
@@ -302,7 +307,7 @@ function doppelView() {
     case 'minion': return infoView('你成為爪牙，稍後與爪牙一起醒來。');
     case 'watchman': return infoView('你成為守夜人，稍後與守夜人一起醒來。');
     case 'beholder': return infoView('你成為守望者，稍後與守望者一起醒來。');
-    case 'thing': return infoView('你成為怪東西：現在請輕拍你左右其中一位鄰居的肩膀。之後不用再醒來。');
+    case 'thing': return infoView('你成為怪東西：現在輕拍你左右其中一位鄰居的肩膀。之後不用再醒來。');
     case 'villager': return infoView('你成為村民，沒有額外的資訊。');
     default: return infoView('（沒有選擇角色）');
   }
@@ -506,7 +511,7 @@ function startVote(kind, { timeUp }) {
   }
 
   const text = kind === 'wolves'
-    ? `恭喜，你們找到魔法咒語了！狼人們，請翻開身份牌，${within}找出${names}。`
+    ? `恭喜，你們找到魔法咒語了！狼人們，翻開身份牌，${within}找出${names}。`
     : `${timeUp ? '時間到！' : ''}喔不，你們沒找到魔法咒語。你們要${within}共同找出${names}。`;
 
   game.timer = { on, remaining: secs, running: false, last: performance.now(), lastTick: null };
@@ -806,7 +811,7 @@ document.addEventListener('click', async (e) => {
     case 'close-settings': closeSettings(); break;
     case 'test-voice':
       unlockAudio();
-      speak('所有人，請閉上眼睛。村長，請醒過來。');
+      speak('所有人，閉上眼睛。村長，醒過來。');
       break;
     case 'reset-settings':
       updateSetting(() => resetSettings());

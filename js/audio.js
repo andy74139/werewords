@@ -40,6 +40,8 @@ function ensureCtx() {
   return ctx;
 }
 
+let speechUnlocked = false;
+
 /** 必須在使用者點擊時呼叫（iOS 限制） */
 export function unlockAudio() {
   try {
@@ -47,13 +49,20 @@ export function unlockAudio() {
     if (navigator.audioSession) navigator.audioSession.type = 'playback';
   } catch { /* 不支援就略過 */ }
   const c = ensureCtx();
-  if (c && c.state !== 'running') c.resume();
-  if ('speechSynthesis' in window) {
-    const u = new SpeechSynthesisUtterance(' ');
+  if (c && c.state !== 'running') c.resume().catch(() => {});
+  // 語音只需要在第一次點擊時解鎖一次；重複送出靜音句子在 iOS 上反而會讓語音佇列卡住
+  if (!speechUnlocked && 'speechSynthesis' in window) {
+    speechUnlocked = true;
+    const u = new SpeechSynthesisUtterance('。');
     u.volume = 0;
     speechSynthesis.speak(u);
   }
 }
+
+// iOS 從背景回來或被語音打斷後，Web Audio 可能停在 suspended／interrupted
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && ctx && ctx.state !== 'running') ctx.resume().catch(() => {});
+});
 
 const midi = (m) => 440 * Math.pow(2, (m - 69) / 12);
 
@@ -132,6 +141,12 @@ function applyMusicLevel(ramp = 0.3) {
 }
 
 function scheduleMusic() {
+  if (ctx.state !== 'running') {
+    ctx.resume().catch(() => {});
+    return;
+  }
+  // 計時器被瀏覽器延遲（背景、語音中斷）時，跳過錯過的拍子，不要一次補排大量音符
+  if (nextAt < ctx.currentTime) nextAt = ctx.currentTime + 0.05;
   while (nextAt < ctx.currentTime + 0.15) {
     const bar = Math.floor(step / 8) % 8;
     const i = step % 8;
@@ -238,32 +253,77 @@ export function speak(text, token) {
   if (!canSpeak) return sleep(estimateSec(text) * 1000, token);
 
   return new Promise((resolve) => {
+    const id = ++speechSeq;
     let done = false;
+    let started = false;
+    let utter = null;
+    let guard = null;
+    let retry = null;
+    const detach = () => { if (utter) { utter.onstart = utter.onend = utter.onerror = null; } };
     const finish = () => {
       if (done) return;
       done = true;
       clearTimeout(guard);
-      duck(false);
+      clearTimeout(retry);
+      detach();
+      if (current === utter) current = null;
+      if (id === speechSeq) duck(false);
       resolve();
     };
-    speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(text);
-    const v = pickVoice();
-    if (v) u.voice = v;
-    u.lang = v?.lang || 'zh-TW';
-    u.rate = settings.voiceRate;
-    u.onend = finish;
-    u.onerror = finish;
+    const say = () => {
+      if (done) return;
+      detach();
+      const u = new SpeechSynthesisUtterance(text);
+      const v = pickVoice();
+      if (v) u.voice = v;
+      u.lang = v?.lang || 'zh-TW';
+      u.rate = settings.voiceRate;
+      u.onstart = () => { started = true; };
+      u.onend = finish;
+      u.onerror = finish;
+      utter = u;
+      current = u; // 保留參照，避免 iOS 回收物件後不觸發 onend
+      speechSynthesis.resume();
+      speechSynthesis.speak(u);
+    };
+
+    token?.onCancel(() => { detach(); speechSynthesis.cancel(); finish(); });
     // iOS 偶爾不觸發 onend，用估計時間保底
-    const guard = setTimeout(finish, (estimateSec(text) * 2 + 3) * 1000);
-    token?.onCancel(() => { speechSynthesis.cancel(); finish(); });
+    guard = setTimeout(finish, (estimateSec(text) * 2 + 4) * 1000);
     duck(true);
-    speechSynthesis.speak(u);
+
+    // iOS 在 cancel() 後立刻 speak() 可能整個卡住，所以先等一下再唸
+    const busy = speechSynthesis.speaking || speechSynthesis.pending;
+    if (busy) speechSynthesis.cancel();
+    const t0 = Date.now();
+    setTimeout(() => {
+      say();
+      // 1.5 秒內沒開始唸，就重設語音引擎再試一次
+      retry = setTimeout(() => {
+        if (started || done) return;
+        detach();
+        speechSynthesis.cancel();
+        setTimeout(() => {
+          say();
+          retry = setTimeout(() => {
+            if (started || done) return;
+            // 語音引擎沒有反應：改用估計的閱讀時間，避免每一頁都卡住很久
+            detach();
+            speechSynthesis.cancel();
+            clearTimeout(guard);
+            guard = setTimeout(finish, Math.max(0, estimateSec(text) * 1000 - (Date.now() - t0)));
+          }, 1500);
+        }, 120);
+      }, 1500);
+    }, busy ? 120 : 0);
   });
 }
 
+let speechSeq = 0;
+let current = null;
+
 export function stopSpeech() {
-  if ('speechSynthesis' in window) speechSynthesis.cancel();
+  if ('speechSynthesis' in window && (speechSynthesis.speaking || speechSynthesis.pending)) speechSynthesis.cancel();
   duck(false);
 }
 
